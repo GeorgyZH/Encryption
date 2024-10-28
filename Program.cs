@@ -5,12 +5,14 @@
 
         private static readonly UInt64[] RoundConstants = new UInt64[9]
         {
-            0x0000000000000000, 0x13198A2E03707344, 0xA4093822299F31D0,
-            0x082EFA98EC4E6C89, 0x452821E638D01377, 0xBE5466CF34E90C6C,
-            0x7EF84F78FD955CB1, 0x85840851F1AC43AA, 0xC882D32F25323C54
+            0xa7d3e671d0ac4d79, 0x3ac991fc1e4754bd, 0x8ca57afb63b8ddd4,
+            0xe5b3c5bea9880ca2, 0x39df29da2ba8cb4c, 0x4b22aa244170a6f9,
+            0x5ae2b0367de433ff, 0x6020088b5eab7f78, 0x7c2c57d2dc6d7e0d
         };
 
-        public static byte[] sBox =
+        public static byte[] inv_sBlock = new byte[256];
+
+        public static byte[] sBlock =
         {
             0xA7,  0xD3,  0xE6,  0x71,  0xD0,  0xAC,  0x4D, 0x79,
             0x3A,  0xC9,  0x91,  0xFC,  0x1E,  0x47,  0x54, 0xBD,
@@ -46,7 +48,8 @@
             0xA4,  0x2F,  0x95,  0x13,  0x0B,  0xF3,  0xE0, 0x37
         };
 
-        public static byte[,] matrix = new byte[,]
+
+        public static byte[,] MatrixH = new byte[,]
         {
             {0x1, 0x3, 0x4, 0x5, 0x6, 0x8, 0xB, 0x7},
             {0x3, 0x1, 0x5, 0x4, 0x8, 0x6, 0x7, 0xB},
@@ -58,8 +61,8 @@
             {0x7, 0xB, 0x8, 0x6, 0x5, 0x4, 0x3, 0x1},
         };
 
-        public static List<List<byte>> sBlock;
-        public static List<List<byte>> matrixH;
+        //public static List<List<byte>> sBlock;
+        //public static List<List<byte>> matrixH;
 
         // заполнение sBLock листа из txt файла
         public static void fillSBlock(string path,ref List<List<byte>> result)
@@ -91,210 +94,24 @@
         }
 
         #region Нелинейное преобразование
-        // нелинейное преобразование
-        //public static UInt64 nonLinearTransform(byte[] inBlock)
-        //{
-        //    List<byte> outBlock = new List<byte>();
-        //    for (int i = 0; i < inBlock.Length; i++)
-        //    {
-        //        int row = (inBlock[i] & 0xf0) >> 4;
-        //        int column = inBlock[i] & 0x0f;
-        //        //outBlock.Add(sBlock[row][column]);
-        //        outBlock.Add(sBox[row,column]);
-        //    }
-        //    return BitConverter.ToUInt64(outBlock.ToArray());
-        //}
 
-        // нелинейное преобразование, заменяет один байт ну другой согласно SBox
-        public static UInt64 nonLinearTransform(byte[] inBlock)
-        {
-            List<byte> outBlock = new List<byte>();
-            for (int i = 0; i < inBlock.Length; i++)
-            {
-                outBlock.Add(sBox[inBlock[i]]);
-            }
-            return BitConverter.ToUInt64(outBlock.ToArray());
-        }
-
-        public static UInt64 nonLinearTransformD(byte[] inBlock, Dictionary<byte,byte> invSBox)
-        {
-            List<byte> outBlock = new List<byte>();
-            for (int i = 0; i < inBlock.Length; i++)
-            {
-                outBlock.Add(invSBox[inBlock[i]]);
-            }
-            return BitConverter.ToUInt64(outBlock.ToArray());
-        }
-
+        
 
         #endregion
 
         #region Линейное преобразование
 
-        public static byte GaloisFieldMultiply(byte a, byte b)
-        {
-            byte p = 0;
-            byte hiBitSet;
-            for (int counter = 0; counter < 8; counter++)
-            {
-                if ((b & 1) != 0)
-                {
-                    p ^= a;
-                }
-                // проверка что старший бит не выходит за границы
-                hiBitSet = (byte)(a & 0x80);
-                a <<= 1;
-                // в случае выхода бита за границы применяется xor на 1D
-                if (hiBitSet != 0)
-                {
-                    a ^= 0x1D;
-                }
-                b >>= 1;
-            }
-            return p;
-        }
 
-        public static UInt64 linearTransform(byte[] data)
-        {
-            byte[] outBlock = new byte[8];
-
-            for (int i = 0; i < 8; i++)
-            {
-                byte sum = 0;
-                for (int j = 0; j < 8; j++)
-                {
-                    sum ^= GaloisFieldMultiply(data[j], matrix[j, i]);
-                }
-                outBlock[i] = sum;
-            }
-
-            return BitConverter.ToUInt64(outBlock);
-        }
-
-        // линейное преобразование
-        static UInt64 MatrixMultiplication(byte[] data)
-        {
-
-            byte[] res = new byte[8];
-            int i = 0;
-            byte sum = 0;
-            
-            for (var j = 0; j < 8; j++)
-            {
-                for (var k = 0; k < 8; k++)
-                {
-                    sum += GaloisFieldMultiply(data[i], matrix[k, j]);
-                    i++;
-                }
-                res[j] = sum;
-                sum = 0;
-                i = 0;
-            }
-
-            return BitConverter.ToUInt64(res);
-        }
-        static UInt64 MatrixMultiplicationD(byte[] data)
-        {
-
-            byte[] res = new byte[8];
-            int i = 0;
-            byte sum = 0;
-
-            for (var j = 0; j < 8; j++)
-            {
-                for (var k = 0; k < 8; k++)
-                {
-                    sum += (byte)(data[i] * matrix[k, j]);
-                    i++;
-                }
-                res[j] = sum;
-                sum = 0;
-                i = 0;
-            }
-
-            return BitConverter.ToUInt64(res);
-        }
         #endregion
 
         public static byte[] Encrypt(byte[] plaintext)
         {
-            UInt64 state = BitConverter.ToUInt64(plaintext);
-            // применение раундового ключа
-            state ^= RoundConstants[0];
-            // нелинейное преобрахзование
-            state = nonLinearTransform(BitConverter.GetBytes(state));
-
-            for (int i = 1; i <=7 ; i++)
-            {
-                // нелинейное преобразование
-                state = nonLinearTransform(BitConverter.GetBytes(state));
-                // линейное преобразование
-                state = MatrixMultiplication(BitConverter.GetBytes(state));
-                // применение раундового ключа
-                state ^= RoundConstants[i];                
-            }
-            state = nonLinearTransform(BitConverter.GetBytes(state));
-            state ^= RoundConstants[8];
-
-            return BitConverter.GetBytes(state);
+            throw new NotImplementedException();
         }
 
         public static byte[] Decrypt(byte[] ciphertext, Dictionary<byte,byte> invSBox)
         {
-            UInt64 state = BitConverter.ToUInt64(ciphertext);
-            // применение раундового ключа
-            state ^= RoundConstants[8];
-            // нелинейное преобрахзование
-            state = nonLinearTransform(BitConverter.GetBytes(state));
-
-            for (int i = 1; i <= 7; i++)
-            {
-                // нелинейное преобразование
-                state = nonLinearTransformD(BitConverter.GetBytes(state),invSBox);
-                // линейное преобразование
-                state = MatrixMultiplication(BitConverter.GetBytes(state));
-                // применение линейного преобразования от текущего раундового ключа
-                state ^= MatrixMultiplication(BitConverter.GetBytes(RoundConstants[i]));
-            }
-             state = nonLinearTransformD(BitConverter.GetBytes(state), invSBox);
-             state ^= RoundConstants[0];
-
-            return BitConverter.GetBytes(state);
-        }
-
-        // не работает
-        public static byte[] Encrypt2(byte[] plaintext, bool decrypt = true)
-        {
-            UInt64 state = BitConverter.ToUInt64(plaintext);
-            // применение раундового ключа
-            state ^= RoundConstants[decrypt?0:8];
-            // нелинейное преобрахзование
-            //state = nonLinearTransform(BitConverter.GetBytes(state));
-
-            for (int i = 1; i <= 7; i++)
-            {
-                
-                state = (T0_T7.T0[(int)(state >> 56)])^
-                        (T0_T7.T1[(int)(state >> 48) & 0xff]) ^
-                        (T0_T7.T2[(int)(state >> 40) & 0xff]) ^
-                        (T0_T7.T3[(int)(state >> 32) & 0xff]) ^
-                        (T0_T7.T4[(int)(state >> 24) & 0xff]) ^
-                        (T0_T7.T5[(int)(state >> 16) & 0xff]) ^
-                        (T0_T7.T6[(int)(state >> 8) & 0xff]) ^
-                        (T0_T7.T7[(int)(state   ) & 0xff]) ^
-                        RoundConstants[i];
-            }
-            state = (T0_T7.T0[(int)(state >> 56)] & 0xff00000000000000UL) ^
-                    (T0_T7.T1[(int)(state >> 48) & 0xff] & 0x00ff000000000000UL) ^
-                    (T0_T7.T2[(int)(state >> 40) & 0xff] & 0x0000ff0000000000UL) ^
-                    (T0_T7.T3[(int)(state >> 32) & 0xff] & 0x000000ff00000000UL) ^
-                    (T0_T7.T4[(int)(state >> 24) & 0xff] & 0x00000000ff000000UL) ^
-                    (T0_T7.T5[(int)(state >> 16) & 0xff] & 0x0000000000ff0000UL) ^
-                    (T0_T7.T6[(int)(state >> 8) & 0xff] & 0x000000000000ff00UL) ^
-                    (T0_T7.T7[(int)(state) & 0xff] & 0x00000000000000ffUL) ^
-                    RoundConstants[decrypt?8 : 0];
-
-            return BitConverter.GetBytes(state);
+            throw new NotImplementedException();
         }
 
         public static void printByteArrayInHEx(byte[] bytes)
@@ -305,28 +122,158 @@
             }
         }
 
-        static void Main(string[] args)
+        public static byte[][] keySchedule(byte[] masterKey)
         {
-            Dictionary<byte, byte> invSBox = new();
+            byte[][] roundKeys = new byte[9][];
+            byte[] K0 = new byte[8];
+            byte[] K1 = new byte[8];
+            Array.Copy(masterKey, 0, K0, 0, 8);
+            Array.Copy(masterKey, 8, K1, 0, 8);
 
-            // заполнение обратного SBox
-            for (int i = 0; i < sBox.Length; i++)
+            for (int i = 0; i < 9; i++)
             {
-                invSBox.Add(sBox[i], (byte)i);
+                byte[] temp = new byte[8];
+                for (int j = 0; j < 8; j++)
+                {
+                    byte rconByte = (byte)((RoundConstants[i] >> (8 * (7 - j))) & 0xFF);
+                    temp[j] = (byte)(K0[j] ^ sBlock[K1[j]] ^ rconByte);
+                }
+                roundKeys[i] = temp;
+                K0 = K1;
+                K1 = temp;
             }
 
-            // текст который нужно зашифровать
-            byte[] plaintext =
+            return roundKeys;
+        }
+
+        // Функция добавления раундового ключа
+        public static byte[] AddRoundKey(byte[] state, byte[] roundKey)
+        {
+            byte[] newState = new byte[state.Length];
+            for (int i = 0; i < state.Length; i++)
             {
-                0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88
-            };
+                newState[i] = (byte)(state[i] ^ roundKey[i]);
+            }
+            return newState;
+        }
+
+        // Функция замены байтов с помощью S-блока
+        public static byte[] SubstituteBytes(byte[] state, byte[] sBlock)
+        {
+            byte[] newState = new byte[state.Length];
+            for (int i = 0; i < state.Length; i++)
+            {
+                newState[i] = sBlock[state[i]];
+            }
+            return newState;
+        }
+
+        // Линейное преобразование (Mixing Transformation)
+        public static byte[] LinearTransform(byte[] state)
+        {
+            byte[] newState = new byte[8];
+            for (int i = 0; i < 8; i++)
+            {
+                byte temp = 0;
+                for (int j = 0; j < 8; j++)
+                {
+                    temp ^= Gmul(state[j], MatrixH[i,j]);
+                }
+                newState[i] = temp;
+            }
+            return newState;
+        }
+
+        // Обратное линейное преобразование
+        public static byte[] InverseLinearTransform(byte[] state)
+        {
+            byte[] newState = new byte[8];
+            for (int i = 0; i < 8; i++)
+            {
+                byte temp = 0;
+                for (int j = 0; j < 8; j++)
+                {
+                    temp ^= Gmul(state[j], MatrixH[i,j]);
+                }
+                newState[i] = temp;
+            }
+            return newState;
+        }
+
+        // Умножение в поле Галуа GF(2^8)
+        public static byte Gmul(byte a, byte b)
+        {
+            byte p = 0;
+            for (int counter = 0; counter < 8; counter++)
+            {
+                if ((b & 1) != 0)
+                {
+                    p ^= a;
+                }
+                bool hiBitSet = (a & 0x80) != 0;
+                a <<= 1;
+                if (hiBitSet)
+                {
+                    a ^= 0x1D; // Ирредуцируемый полином x^8 + x^4 + x^3 + x^2 + 1
+                }
+                b >>= 1;
+            }
+            return p;
+        }
+
+        public static byte[] EncryptBlock(byte[] inputBlock, byte[][] roundKeys)
+        {
+            byte[] state = AddRoundKey(inputBlock, roundKeys[0]);
+            for (int i = 1; i <= 8; i++)
+            {
+                state = SubstituteBytes(state, sBlock);
+                if (i != 8)
+                {
+                    state = LinearTransform(state);
+                }
+                state = AddRoundKey(state, roundKeys[i]);
+            }
+            return state;
+        }
+
+        public static byte[] DecryptBlock(byte[] cipherBlock, byte[][] roundKeys)
+        {
+            byte[] state = AddRoundKey(cipherBlock, roundKeys[8]);
+            for (int i = 7; i >= 0; i--)
+            {
+                state = SubstituteBytes(state, inv_sBlock);
+                if (i != 0)
+                {
+                    state = InverseLinearTransform(state);
+                }
+                state = AddRoundKey(state, roundKeys[i]);
+            }
+            return state;
+        }
+
+        static void Main(string[] args)
+        {
+            for (int i = 0; i < 256; i++)
+            {
+                inv_sBlock[sBlock[i]] = (byte)i;
+            }
+
+            // ключ шифрования
+            byte[] masterKey = new byte[16] { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F };
+
+            
+            // текст который нужно зашифровать
+            byte[] plaintext = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+
+            // раундовые ключи
+            byte[][] roundKeys = keySchedule(masterKey);
 
             Console.Write("Исходный: ");
             printByteArrayInHEx(plaintext);
             Console.WriteLine("\n");
 
-            var encrypted = Encrypt(plaintext);
-            var decrypted = Decrypt(encrypted,invSBox);
+            var encrypted = EncryptBlock(plaintext, roundKeys);
+            var decrypted = DecryptBlock(encrypted, roundKeys);
 
             Console.Write("шифрование: ");
             printByteArrayInHEx(encrypted);
