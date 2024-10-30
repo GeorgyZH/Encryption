@@ -253,7 +253,7 @@ namespace Encryption
             Console.WriteLine("Раунодовые ключи с расширением");
             foreach (var key in keys)
             {
-                printByteArrayInHEx(key);
+                Console.WriteLine(BitConverter.ToInt64(key)); 
                 Console.WriteLine();
             }
             // текст который нужно зашифровать
