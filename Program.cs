@@ -202,6 +202,8 @@ namespace Encryption
             Console.WriteLine($"Encrypt");
             byte[] st = KeyAdd(RoundKey[0], Text);
             Console.WriteLine("Добавление раундового ключа");
+            Console.WriteLine($"state: {Text}");
+            Console.WriteLine($"rkey: {RoundKey[0]}");
             printByteArrayInHEx(st);
             Console.WriteLine();
             for (int i = 1; i <= 7; i++)
