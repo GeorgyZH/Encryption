@@ -233,9 +233,21 @@
             State = MatrixMultiplication(BitConverter.GetBytes(State));
 
             // применение раундового ключа
-            State ^= RoundConst;
+            State = KeyAdd(RoundConst, State);
 
             return State;
+        }
+
+        public static UInt64 KeyAdd(UInt64 a, UInt64 b)
+        {
+            var keyb = BitConverter.GetBytes(a);
+            var stateb = BitConverter.GetBytes(b);
+            var result = new byte[8];
+            for (int i = 0; i < 8; i++)
+            {
+                result[i] = (byte)(keyb[i] ^ stateb[i]);
+            }
+            return BitConverter.ToUInt64(result);
         }
 
         public static byte[] Encrypt(byte[] plaintext)
@@ -243,9 +255,11 @@
             Console.WriteLine("Encrypt");
             UInt64 state = BitConverter.ToUInt64(plaintext);
             // применение раундового ключа
-            state ^= RoundConstants[0];
+            state = KeyAdd(RoundConstants[0], state);
 
             Console.WriteLine("Добавление раундового ключа");
+            Console.WriteLine($"state: {state}");
+            Console.WriteLine($"rkey: {RoundConstants[0]}");
             printByteArrayInHEx(BitConverter.GetBytes(state));
             Console.WriteLine();            
 
@@ -258,7 +272,7 @@
                 Console.WriteLine();
             }
             state = nonLinearTransform(BitConverter.GetBytes(state));
-            state ^= RoundConstants[8];
+            state = KeyAdd(RoundConstants[0], state);
 
             return BitConverter.GetBytes(state);
         }
