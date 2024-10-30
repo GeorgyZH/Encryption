@@ -240,12 +240,20 @@
         public static UInt64 RoundMethod(UInt64 State, byte[] RoundConst)
         {
             State = nonLinearTransform(BitConverter.GetBytes(State));
-
+            Console.WriteLine("Не линейное");
+            printByteArrayInHEx(BitConverter.GetBytes(State));
+            Console.WriteLine();
             // линейное преобразование
             State = MatrixMultiplication(BitConverter.GetBytes(State));
+            Console.WriteLine("Линейное");
+            printByteArrayInHEx(BitConverter.GetBytes(State));
+            Console.WriteLine();
 
             // применение раундового ключа
             State = KeyAdd(RoundConst, BitConverter.GetBytes(State));
+            Console.WriteLine("Добавление ключа");
+            printByteArrayInHEx(BitConverter.GetBytes(State));
+            Console.WriteLine();
 
             return State;
         }
@@ -267,9 +275,6 @@
             // применение раундового ключа
             state = KeyAdd(rc[0], BitConverter.GetBytes(state));
 
-            Console.WriteLine("Добавление раундового ключа");
-            Console.WriteLine($"state: {state}");
-            Console.WriteLine($"rkey: {RoundConstants[0]}");
             printByteArrayInHEx(BitConverter.GetBytes(state));
             Console.WriteLine();            
 
