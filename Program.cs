@@ -262,12 +262,15 @@
         {
             Console.WriteLine("Decrypt");
             UInt64 state = BitConverter.ToUInt64(ciphertext);
-            // применение раундового ключа
             state = KeyAdd(rc[8], BitConverter.GetBytes(state));
-
+            Console.WriteLine("Добавление ключа");
+            printByteArrayInHEx(BitConverter.GetBytes(state));
+            Console.WriteLine();
             for (int i = 7; i >= 1; i--)
             {
-                state = RoundMethod(state, BitConverter.GetBytes( linearTransform(rc[0])) );
+                Console.WriteLine("Раунд: "+i);
+                state = RoundMethod(state, BitConverter.GetBytes(linearTransform(rc[i])) );
+                Console.WriteLine("--------------------------------------------- ");
             }
             state = KeyAdd(rc[0], BitConverter.GetBytes(state));
 
