@@ -94,6 +94,9 @@ namespace Encryption
             {
                 result[i] = sBlock[a[i]];
             }
+            Console.WriteLine("Не линейное");
+            printByteArrayInHEx(result);
+            Console.WriteLine();
             return result;
         }
 
@@ -105,6 +108,9 @@ namespace Encryption
             {
                 result[i] = GaloisFieldMultiplyBytesArray(a, matrixH[i]);
             }
+            Console.WriteLine("Линейное");
+            printByteArrayInHEx(result);
+            Console.WriteLine();
             return result;
         }
 
@@ -116,6 +122,9 @@ namespace Encryption
             {
                 result[i] = (byte)(k[i] ^ a[i]);
             }
+            Console.WriteLine("Добавление ключа");
+            printByteArrayInHEx(result);
+            Console.WriteLine();
             return result;
         }
 
