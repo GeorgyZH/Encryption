@@ -5,9 +5,18 @@
 
         private static readonly UInt64[] RoundConstants = new UInt64[9]
         {
-            0x0000000000000000, 0x13198A2E03707344, 0xA4093822299F31D0,
-            0x082EFA98EC4E6C89, 0x452821E638D01377, 0xBE5466CF34E90C6C,
-            0x7EF84F78FD955CB1, 0x85840851F1AC43AA, 0xC882D32F25323C54
+            //0x0000000000000000, 0x13198A2E03707344, 0xA4093822299F31D0,
+            //0x082EFA98EC4E6C89, 0x452821E638D01377, 0xBE5466CF34E90C6C,
+            //0x7EF84F78FD955CB1, 0x85840851F1AC43AA, 0xC882D32F25323C54
+            0x413623a282829471,
+            0xd33869a36e1abc39,
+            0x83e18ba853003ddf,
+            0x574e097cf2a0d00d,
+            0xbd3284f79c8bd5ab,
+            0x9919aba72c685ea0,
+            0xa2f96d51d414472d,
+            0x9e727c1730373b2a,
+            0xde2bc1dc5cf44846
         };
 
         public static byte[] sBox =
@@ -216,22 +225,37 @@
         }
         #endregion
 
+        public static UInt64 RoundMethod(UInt64 State, UInt64 RoundConst)
+        {
+            State = nonLinearTransform(BitConverter.GetBytes(State));
+
+            // линейное преобразование
+            State = MatrixMultiplication(BitConverter.GetBytes(State));
+
+            // применение раундового ключа
+            State ^= RoundConst;
+
+            return State;
+        }
+
         public static byte[] Encrypt(byte[] plaintext)
         {
+            Console.WriteLine("Encrypt");
             UInt64 state = BitConverter.ToUInt64(plaintext);
             // применение раундового ключа
             state ^= RoundConstants[0];
-            // нелинейное преобрахзование
-            state = nonLinearTransform(BitConverter.GetBytes(state));
+
+            Console.WriteLine("Добавление раундового ключа");
+            printByteArrayInHEx(BitConverter.GetBytes(state));
+            Console.WriteLine();            
 
             for (int i = 1; i <=7 ; i++)
             {
-                // нелинейное преобразование
-                state = nonLinearTransform(BitConverter.GetBytes(state));
-                // линейное преобразование
-                state = MatrixMultiplication(BitConverter.GetBytes(state));
-                // применение раундового ключа
-                state ^= RoundConstants[i];                
+                RoundMethod(state, RoundConstants[i]);
+
+                Console.WriteLine("Раундовый метод");
+                printByteArrayInHEx(BitConverter.GetBytes(state));
+                Console.WriteLine();
             }
             state = nonLinearTransform(BitConverter.GetBytes(state));
             state ^= RoundConstants[8];
@@ -318,7 +342,7 @@
             // текст который нужно зашифровать
             byte[] plaintext =
             {
-                0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88
+                0x61  ,0x62  ,0x63  ,0x64  ,0x65  ,0x66  ,0x67  ,0x68
             };
 
             Console.Write("Исходный: ");
@@ -326,14 +350,14 @@
             Console.WriteLine("\n");
 
             var encrypted = Encrypt(plaintext);
-            var decrypted = Decrypt(encrypted,invSBox);
+            //var decrypted = Decrypt(encrypted,invSBox);
 
             Console.Write("шифрование: ");
             printByteArrayInHEx(encrypted);
 
-            Console.Write("\n\nдешифровка: ");
-            printByteArrayInHEx(decrypted);
-            Console.WriteLine("\n\n\n\n");
+            //Console.Write("\n\nдешифровка: ");
+            //printByteArrayInHEx(decrypted);
+            //Console.WriteLine("\n\n\n\n");
         }
     }
 }
