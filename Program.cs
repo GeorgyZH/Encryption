@@ -272,6 +272,7 @@
                 state = RoundMethod(state, BitConverter.GetBytes(linearTransform(rc[i])) );
                 Console.WriteLine("--------------------------------------------- ");
             }
+            state = nonLinearTransform(BitConverter.GetBytes(state));
             state = KeyAdd(rc[0], BitConverter.GetBytes(state));
 
             return BitConverter.GetBytes(state);
