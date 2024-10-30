@@ -1,4 +1,7 @@
-﻿namespace Encryption
+﻿using System.Text;
+using System.Xml;
+
+namespace Encryption
 {
     internal class Program
     {
@@ -83,7 +86,7 @@
             [0x7, 0xB, 0x8, 0x6, 0x5, 0x4, 0x3, 0x1],
         };
 
-        static byte[] NonLi(byte[] a)
+        static byte[] nonLinearTransform(byte[] a)
         {
             // Нелинейный слой (S-блок)
             byte[] result = new byte[8];
@@ -94,13 +97,13 @@
             return result;
         }
 
-        static byte[] Diffu(byte[] a)
+        static byte[] linearTransform(byte[] a)
         {
             // Линейный слой
             byte[] result = new byte[8];
             for (int i = 0; i < 8; i++)
             {
-                result[i] = d(a, matrixH[i]);
+                result[i] = GaloisFieldMultiplyBytesArray(a, matrixH[i]);
             }
             return result;
         }
@@ -116,10 +119,10 @@
             return result;
         }
 
-        static byte[] RFunc(byte[] k, byte[] a)
+        static byte[] RoundMethod(byte[] k, byte[] a)
         {
             // Раундовая функция
-            return KeyAdd(k, Diffu(NonLi(a)));
+            return KeyAdd(k, linearTransform(nonLinearTransform(a)));
         }
 
         static byte[] Feil(byte[] k, byte[] constR)
@@ -129,7 +132,7 @@
             Array.Copy(k, 0, L, 0, 8);
             Array.Copy(k, 8, R, 0, 8);
 
-            byte[] temp = RFunc(constR, R);
+            byte[] temp = RoundMethod(constR, R);
             byte[] newL = XOR(L, temp);
 
             byte[] result = new byte[16];
@@ -139,31 +142,32 @@
             return result;
         }
 
-        static byte[][] KeySche(byte[] k)
+        static byte[][] KeySchedule(byte[] keyT)
         {
             List<byte[]> aRes = new List<byte[]>();
             for (int i = 0; i < 9; i++)
             {
-                byte[] data = Feil(k, BitConverter.GetBytes(RoundConstants[i]));
+                byte[] data = Feil(keyT, BitConverter.GetBytes(RoundConstants[i]));
                 byte[] key = new byte[8];
                 Array.Copy(data, 8, key, 0, 8);
                 aRes.Add(key);
-                k = data;
+                keyT = data;
+                //aRes.Add(BitConverter.GetBytes(RoundConstants[i]));
             }
             return [.. aRes];
         }
         
-        static byte d(byte[] a, byte[] b)
+        static byte GaloisFieldMultiplyBytesArray(byte[] a, byte[] b)
         {
             byte res = 0;
             for (int i = 0; i < 8; i++)
             {
-                res ^= fMul(a[i], b[i]);
+                res ^= GaloisFieldMultiply(a[i], b[i]);
             }
             return res;
         }
 
-        static byte fMul(byte a, byte b)
+        static byte GaloisFieldMultiply(byte a, byte b)
         {
             byte p = 0;
             for (int counter = 0; counter < 8; counter++)
@@ -193,47 +197,76 @@
             return result;
         }
 
-        static byte[] Encrypt(byte[][] RKey, byte[] a)
+        static byte[] Encrypt(byte[][] RoundKey, byte[] Text)
         {
-            byte[] st = KeyAdd(RKey[0], a);
+            Console.WriteLine($"Encrypt");
+            byte[] st = KeyAdd(RoundKey[0], Text);
+            Console.WriteLine("Добавление раундового ключа");
+            printByteArrayInHEx(st);
+            Console.WriteLine();
             for (int i = 1; i <= 7; i++)
             {
-                st = RFunc(RKey[i], st);
+                st = RoundMethod(RoundKey[i], st);
+                Console.WriteLine("Раундовый метод");
+                printByteArrayInHEx(st);
+                Console.WriteLine();
             }
-            return KeyAdd(RKey[8], NonLi(st));
+            return KeyAdd(RoundKey[8], nonLinearTransform(st));
         }
-        static byte[] Decrypt(byte[][] RKey, byte[] a)
+        static byte[] Decrypt(byte[][] RoundKey, byte[] ChipherText)
         {
-            byte[] st = KeyAdd(RKey[8], a);
+            Console.WriteLine($"Decrypt");
+            byte[] st = KeyAdd(RoundKey[8], ChipherText);
+            Console.WriteLine("Добавление раундового ключа");
+            printByteArrayInHEx(st);
+            Console.WriteLine();
             for (int i = 7; i >= 1; i--)
             {
-                byte[] temp = RFunc(Diffu(RKey[i]), st);
+                byte[] temp = RoundMethod(linearTransform(RoundKey[i]), st);
                 st = temp;
+                Console.WriteLine("Раундовый метод");
+                printByteArrayInHEx(st);
+                Console.WriteLine();
             }
-            return KeyAdd(RKey[0], NonLi(st));
+            return KeyAdd(RoundKey[0], nonLinearTransform(st));
         }
 
         static void Main(string[] args)
         {
-            byte[] keyT = new byte[16]; // 128 бит
-            keyT[0] = 0x80; // Большой порядок (big-endian)
+            string text = "qwertyuiopasdfgh";
+            Console.WriteLine($"Ключ: {text}");
+            char[] symbols = [.. text];
+            if(symbols.Length > 16)
+            {
+                throw new Exception();
+            }
+            var tc = new ASCIIEncoding();
+            var tb = tc.GetBytes(symbols);
 
-            byte[] test = new byte[8]; // 64 бита (все нули)
+            byte[] keyT = tb;//new byte[16]; // 128 бит
+            //keyT[0] = 0x80; // Большой порядок (big-endian)
 
             // Генерация раундовых ключей
-            byte[][] key = KeySche(keyT);
-
+            byte[][] keys = KeySchedule(keyT);
+            Console.WriteLine("Раунодовые ключи с расширением");
+            foreach (var key in keys)
+            {
+                printByteArrayInHEx(key);
+                Console.WriteLine();
+            }
             // текст который нужно зашифровать
             byte[] plaintext = new byte[8] { (byte)'a', (byte)'b', (byte)'c', (byte)'d', (byte)'e', (byte)'f', (byte)'g', (byte)'h' };
-
+            Console.WriteLine($"Текст для шифрования: ");
+            printByteArrayInHEx(plaintext);
+            Console.WriteLine();
 
             Console.Write("Исходный: ");
             //printByteArrayInHEx(plaintext);
             printByteToChar(plaintext);
             Console.WriteLine("\n");
 
-            var encrypted = Encrypt(key, plaintext);
-            var decrypted = Decrypt(key, encrypted);
+            var encrypted = Encrypt(keys, plaintext);
+            var decrypted = Decrypt(keys, encrypted);
 
             Console.Write("шифрование: ");
             //printByteArrayInHEx(encrypted);
