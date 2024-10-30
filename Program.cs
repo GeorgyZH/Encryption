@@ -233,11 +233,10 @@ namespace Encryption
             Console.WriteLine();
             for (int i = 7; i >= 1; i--)
             {
+                Console.WriteLine("Раунд: " + i);
                 byte[] temp = RoundMethod(linearTransform(RoundKey[i]), st);
                 st = temp;
-                Console.WriteLine("Раундовый метод");
-                printByteArrayInHEx(st);
-                Console.WriteLine();
+                Console.WriteLine("------------------------------------------------");
             }
             return KeyAdd(RoundKey[0], nonLinearTransform(st));
         }
